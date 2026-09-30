@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# Usage: ./test-distributed.sh <CONFIG_PATH>
+export PYTHONPATH=/home/ldc/Projects/RoboLLM/zoo/MMDrive:$PYTHONPATH
+
+CONFIG=$1
+
+# Specify the GPUs to use (4, 5, 6)
+export CUDA_VISIBLE_DEVICES=6
+
+# Number of processes per node (number of GPUs)
+GPUS_PER_NODE=$2
+
+# Optional: Set MASTER_ADDR and MASTER_PORT if running on multiple nodes
+MASTER_ADDR=${MASTER_ADDR:-"127.0.0.1"}
+MASTER_PORT=${MASTER_PORT:-29397}
+current_time=$(date +"%Y%m%d_%H%M%S")
+
+# Launch the distributed testing using torchrun
+torchrun \
+    --nproc_per_node=$GPUS_PER_NODE \
+    --nnodes=1 \
+    --node_rank=0 \
+    --master_addr=$MASTER_ADDR \
+    --master_port=$MASTER_PORT \
+    $(dirname "$0")/test_vis.py \
+    --model_path='/home/ldc/Projects/RoboLLM/zoo/MMDrive/checkpoints/llava-interleave-qwen-7b_lora-True_qlora-False/checkpoint-8000' \
+    --origin_model_path='/home/ldc/Projects/RoboLLM/zoo/MMDrive/checkpoints/LLM/llava-next-interleave' \
+    --result_path="vis/detection/"\
+    $CONFIG

@@ -1,0 +1,55 @@
+# Repositories kept beside the main codebase; they are not maintained here.
+/Co-MTP/
+/GPT-Driver/
+/UniMM-V2X-main/
+/V2X-Seq-TFD/
+/OmniV2X-main/
+
+# RoboLLM components that are used as-is and maintained separately.
+/RoboLLM/zoo/Senna/
+/RoboLLM/zoo/OpenEMMA/
+/RoboLLM/zoo/OmniDrive-main/results_planning_test/
+/RoboLLM/zoo/OmniDrive-main/vis/
+/RoboLLM/zoo/OmniDrive-main/data_gen/planning_anchor_infos.pkl
+
+# DrivewithVLM datasets, model weights, training runs and generated results.
+/RoboLLM/zoo/DrivewithVLM/data/
+/RoboLLM/zoo/DrivewithVLM/checkpoints/
+/RoboLLM/zoo/DrivewithVLM/ckpts
+/RoboLLM/zoo/DrivewithVLM/work_dirs/
+/RoboLLM/zoo/DrivewithVLM/tools/work_dirs/
+/RoboLLM/zoo/DrivewithVLM/evaluation_results/
+/RoboLLM/zoo/DrivewithVLM/tools/eval/gt/
+/RoboLLM/zoo/DrivewithVLM/tools/eval/pred_trajs_dict.pkl
+/RoboLLM/zoo/DrivewithVLM/tools/eval/result.pkl
+/RoboLLM/zoo/DrivewithVLM/evaluation_analysis_dump.json
+/RoboLLM/zoo/DrivewithVLM/tools/evaluation_analysis_dump.json
+/RoboLLM/zoo/DrivewithVLM/tools/VIS_PLANNING/output_*.png
+/RoboLLM/zoo/DrivewithVLM/wandb/
+/RoboLLM/zoo/DrivewithVLM/vis/
+/RoboLLM/zoo/DrivewithVLM/vis_image/
+/RoboLLM/zoo/DrivewithVLM/vis_test_image/
+/RoboLLM/zoo/DrivewithVLM/tta/vis/
+/RoboLLM/zoo/DrivewithVLM/Recycle_Bin/
+/RoboLLM/zoo/DrivewithVLM/**/tf_logs/
+
+# Model and engine files inside DrivewithVLM (keep configs and source tracked).
+/RoboLLM/zoo/DrivewithVLM/**/*.pth
+/RoboLLM/zoo/DrivewithVLM/**/*.pt
+/RoboLLM/zoo/DrivewithVLM/**/*.ckpt
+/RoboLLM/zoo/DrivewithVLM/**/*.safetensors
+/RoboLLM/zoo/DrivewithVLM/**/*.engine
+
+# Python/tool caches and local OS/editor files.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+**/.vscode/
+
+# Generated logs and TensorBoard event files.
+*.log
+events.out.tfevents.*
