@@ -1,6 +1,6 @@
 # 基于研究报告（7）和实际代码进展的下一步建议
 
-核查日期：2026-09-30。本文是开发建议，未修改模型、数据或训练任务。依据为 `deep-research-report (7).md`、现有两份优化计划、E2 validation 产物、E5 诊断报告和当前源码/日志。
+核查日期：2026-09-30。本文初始内容是开发建议；2026-09-30 已开始落地第一阶段数值合同与评测器，尚未重生成数据、训练模型或启动 GPU 任务。依据为 `deep-research-report (7).md`、现有两份优化计划、E2 validation 产物、E5 诊断报告和当前源码/日志。
 
 ## 当前状态与证据
 
@@ -11,7 +11,7 @@
 | 检测 D0 | 已记录车路坐标闭环审计 | 闭环正确不等于投影、对象来源和时间同步全部正确 |
 | D1/D2 数值链路 | NCCL NVL 绕过方案、velo_update FP32 和 D2 动态 scaler 已完成短程验证 | smoke 不能替代 detection AP 或长训练稳定性 |
 | D1 全量训练 | `work_dirs/e5a_d1_d2_q3_full_8gpu_e30/vehicle/` 已有 epoch_1～5；检查时 JSON 日志最新为 epoch 6、iter 170，loss=27.71683、grad_norm=136.8689 | 日志快照不保证进程当前仍运行；未发现这次 D2 全量 checkpoint 或 detection validation |
-| 新模型 | 当前 loader 仍加载 `LlavaForConditionalGeneration` | 未在所查训练、loader、collator 路径找到连续轨迹头或 Agent Token 接口 |
+| 新模型 | 当前 loader 仍加载 `LlavaForConditionalGeneration` | 连续轨迹头或 Agent Token 接口尚未实现；正在补结构化目标与独立数值评测 |
 
 E2 每步误差换算为主时域：L2@1/2/3 s=0.0924/0.4797/1.2398 m，三者平均为 0.6040 m。这个数值仅适用于内部 157 帧 validation 和当前输入条件，不能与 OmniV2X 等公开数字直接比较。
 
@@ -22,8 +22,8 @@ E2 每步误差换算为主时域：L2@1/2/3 s=0.0924/0.4797/1.2398 m，三者�
 ### 1. 协议和输入合同先固定
 
 - 保留现有 V2 physics 作为旧实验快照。新建结构化数据版本，不覆盖已有 checkpoint 的标签和评测依据。
-- `tools/generate_v2x_planning_v2.py`：直接保存未四舍五入的 `future_xy`、`future_mask`、`future_times_s`、history 及 mask、ego state 及有效性。当前 JSON 的轨迹主要存在于 assistant 文本中，不适合成为连续训练和统一评测的唯一 GT。
-- `tools/eval/trajectory_diagnostics_v2.py`：保留文字动作诊断，另建立模型无关数值 evaluator。当前逻辑解析完整 9 点、按全有效计算误差，适用于已过滤的旧数据，不能直接用于未来缺失的新版。
+- `tools/generate_v2x_planning_v2.py`：已改为同时保存未取整的 `future_xy`、`future_mask`、`future_times_s`、history、ego state 及速度有效性；旧数据尚未重生成，且仍保留 4.5 秒完整未来筛选。
+- `tools/eval/continuous_trajectory_metrics.py`：已新增模型无关数值 evaluator；当前 `trajectory_diagnostics_v2.py` 继续负责旧版文字动作诊断。数值 evaluator 尚需用真实 C0 prediction 文件做端到端验证。
 - 统一输出应包含 token、frame、timestamps、numeric trajectory；报告逐时域有效样本数、缺失/非法预测数、L2@1/2/3 s、三时域平均、3 s FDE。4.5 s FDE 单列，不能混用 FDE 含义。
 - 碰撞接入同一坐标和时间对齐的 occupancy checker；当前 diagnostics 的 collision 参数是可选输入，缺失时为 null，不能解释成零碰撞。
 - 3 s 主协议可保留更多可用数据；用独立版本和 manifest 实施，再重新训练/评测必要对照，不能只改新模型的数据筛选。
@@ -84,7 +84,7 @@ D3 直接 query/BEV fusion 留作诊断 baseline，不作为 Agent Token planner
 
 | 顺序 | 可交付改动 | 进入下一步的条件 |
 |---|---|---|
-| 1 | 输入来源审计、数值 trajectory/mask 合同、统一 evaluator；补 E2 test 最终报告 | 明确 split、GT、输入条件和有效样本数；不能靠 test 调参 |
+| 1 | 输入来源审计、数值 trajectory/mask 合同、统一 evaluator；补 E2 test 最终报告 | 合同与 evaluator 代码已起步；重生成结构化 split、跑指标回归、完成 E2 test 后再准入 C0 |
 | 2 | Ego-only continuous 与同 backbone Direct-VLM continuous | 数值训练/加载闭环通过；与旧模型按同输入条件比较 |
 | 3 | Oracle geometry token + 简单融合，同时补 D1/D2 detection validation/export | 路端 token 来源/坐标/时间可追溯；能解释协同收益或无收益 |
 | 4 | 冻结 D2 detector 替换 oracle，保留相同 planner | 定量分离检测误差与规划器能力 |

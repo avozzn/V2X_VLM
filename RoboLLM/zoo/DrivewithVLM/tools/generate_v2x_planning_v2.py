@@ -200,6 +200,8 @@ def build_samples(rows, by_token):
             excluded["incomplete_future_4_5s"] += 1
             continue
         velocity, acceleration = causal_ego_state(info, past)
+        velocity_values = np.asarray(info.get("sdc_velocity", []), dtype=np.float64).reshape(-1)
+        velocity_valid = velocity_values.size >= 2 and np.isfinite(velocity_values[:2]).all()
         planning_mask = np.ones((1, 9, 2), dtype=np.float32)
         metadata = generate_planning_metadata_v2(
             sdc_planning=trajectory[None, ...],
@@ -212,6 +214,21 @@ def build_samples(rows, by_token):
             "token": token,
             "scene_token": str(info.get("scene_token", "")),
             "image": images,
+            # Authoritative numeric labels for continuous planners/evaluators.
+            # Keep these unrounded; the conversation below remains the legacy text target.
+            "planning_targets": {
+                "schema_version": "1.0",
+                "coordinate_frame": "current_ego_lidar_xy_m",
+                "future_times_s": FUTURE_TIMES.tolist(),
+                "future_xy": trajectory.tolist(),
+                "future_mask": future_mask.astype(bool).tolist(),
+                "history_times_s": HISTORY_TIMES.tolist(),
+                "history_xy": history.tolist(),
+                "history_mask": history_mask.astype(bool).tolist(),
+                "ego_velocity_xy_mps": velocity.tolist(),
+                "ego_acceleration_xy_mps2": acceleration.tolist(),
+                "ego_velocity_valid": bool(velocity_valid),
+            },
             "planning_labels_v2": metadata,
             "conversations": [
                 {"from": "human", "value": build_question(
@@ -296,7 +313,7 @@ def main():
 
     manifest = {
         "schema_version": "2.0",
-        "output_contract_version": "2.1-action-trajectory-physics",
+        "output_contract_version": "2.2-numeric-trajectory-targets",
         "seed": args.seed,
         "val_scene_ratio": args.val_scene_ratio,
         "source": {"train_info": str(args.train_info.resolve()), "test_info": str(args.test_info.resolve())},
@@ -305,7 +322,7 @@ def main():
     }
     audit = {
         "schema_version": "2.0",
-        "output_contract_version": "2.1-action-trajectory-physics",
+        "output_contract_version": "2.2-numeric-trajectory-targets",
         "source_counts": {"official_train": len(train_rows), "official_test": len(test_rows)},
         "counts": {"train": len(train), "val": len(val), "test": len(test)},
         "unique_tokens": {
