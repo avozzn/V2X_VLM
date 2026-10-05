@@ -165,18 +165,47 @@ E2 已证明文字动作可评测，但它不适合作为最终毫米/米级坐�
 
 #### 2.2 论文结果总表模板
 
-| Method | Train split / samples | L2@1s ↓ | L2@2s ↓ | L2@3s ↓ | Final L2 ↓ | Collision ↓ | Off-road ↓ | BPS ↓ | Latency ms ↓ | Memory GB ↓ | PDMS ↑ | Notes |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| C0 Ego-only continuous |  |  |  |  |  |  |  | 0 |  |  |  |  |
-| C1 Current E2 physics |  |  |  |  |  |  |  |  |  |  |  | text coverage separately |
-| C2 V2X-VLM-style |  |  |  |  |  |  |  |  |  |  |  |  |
-| C3 UniMM-V2X |  |  |  |  |  |  |  |  |  |  |  | official re-train/adapt |
-| C4 OmniV2X no-map |  |  |  |  |  |  |  |  |  |  |  | released vs unified protocol |
-| C5 OmniV2X + MAP |  |  |  |  |  |  |  |  |  |  |  | released vs unified protocol |
-| C6 Proposed-G oracle |  |  |  |  |  |  |  |  |  |  |  | upper-bound token input |
-| C7 Proposed-GS |  |  |  |  |  |  |  |  |  |  |  | final |
+| Method | Train split / samples | L2@1s ↓ | L2@2s ↓ | L2@3s ↓ | Final L2 ↓ | 平均L2@1/2/3s ↓ | Collision ↓ | Off-road ↓ | BPS ↓ | Latency ms ↓ | Memory GB ↓ | PDMS ↑ | Notes |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| C0 Ego-only continuous |  |  |  |  |  | |  |  | 0 |  |  |  |  |
+| C1 Current E2 physics |  |  |  |  |  | |  |  |  |  |  |  | text coverage separately |
+| C2 V2X-VLM-style |  |  |  |  |  | |  |  |  |  |  |  |  |
+| C3 UniMM-V2X |  |  |  |  |  | |  |  |  |  |  |  | official re-train/adapt |
+| C4 OmniV2X no-map |  |  |  |  |  | |  |  |  |  |  |  | released vs unified protocol |
+| C5 OmniV2X + MAP |  |  |  |  |  | |  |  |  |  |  |  | released vs unified protocol |
+| C6 Proposed-G oracle |  |  |  |  |  | |  |  |  |  |  |  | upper-bound token input |
+| C7 Proposed-GS |  |  |  |  |  | |  |  |  |  |  |  | final |
+| T1 双端GT对象文本 | native train / 929 | 0.1099 | 0.5764 | 1.5095 | 3.8247 | 0.7319 | — | — | — | — | 21.45 | — | test480；epoch5；coverage480/480；seed42；state/history文本 |
+| I1 / S1 双端GT对象soft tokens | native train / 929 | 0.1030 | 0.5642 | 1.4802 | 3.7948 | 0.7158 | — | — | — | — | 17.27 | — | test480；epoch6；coverage480/480；seed42；state/history文本 |
+| I2 视觉 / 空间queries | 待训练 | — | — | — | — | — | — | — | — | — | — | — | 待实现；保留P，同对象/状态合同；额外预训练披露 |
+| I3 跨源空间融合queries | 待训练 | — | — | — | — | — | — | — | — | — | — | — | 待实现；保留P；与I2固定carrier对照 |
 
 > 不允许把 OmniV2X/UniMM 论文报告的平均 L2 直接填入本表；只有重新以相同 split、horizon、GT 和 collision checker 得出的数值才可横向比较。论文原始复现数值另做附表。
+
+
+2026-10-05填写说明：本表新增T1与I1/S1两行，C0–C7原计划模型行保留，不能将当前Oracle＋语言LoRA配方直接冒充原C6/C7。当前已测两行使用同一`dual_object_a1_v1_20261004`缓存（929train/157val/480test），独立双端原生GT、因果补偿、A1关联、50m ROI，均6epoch/1398更新，val选epoch，test生成9步、0.5–4.5s轨迹；两组评测输入guard统一8192，不截断。
+
+- **Final L2明确指4.5s终点L2（FDE@4.5s），不是全9步平均，也不是三时域平均**；新增平均L2列为(L2@1s＋L2@2s＋L2@3s)/3，单位m。原C0–C7填值时须采用相同定义与horizon。
+- Memory单位为十进制GB，记录四rank中最大`torch.cuda.max_memory_allocated`（T1=21,454,255,616bytes；S1=17,272,263,168bytes），不是nvidia-smi总占用或reserved memory；后续统一测量方式。
+- Latency尚未测量单样本端到端时延，留“—”。四卡生成阶段整批480帧耗时T1=1692.68s、S1=1550.50s（约28.2/25.8分钟），不含模型加载，不能直接填入Latency列。
+- Collision、Off-road、PDMS无相应评测器；BPS无传输协议和字节计量，均未评测，不能用输入tokens或对象数代替。空白旧行/“—”均表示无可比较实测值，C0 BPS=0仅为无RSU通信设定。
+- 单seed42；S1 test主平均降低2.20%，不能称显著或稳定优势，不能由两组都有RSU的对照推断协同增益。validation结果另见实施记录，不混填test表。
+
+证据：[test总报告](../evaluation_results/T1_S1_test_20261005_114004/report.md)、[comparison.json](../evaluation_results/T1_S1_test_20261005_114004/comparison.json)、[逐帧分析](../evaluation_results/T1_S1_test_20261005_114004/paired_analysis.json)。对应技术与实验定义见[融合方案3.1.1](roadside_agent_token_fusion_plan.md#311-实验方案与首轮结果2026-10-05)。
+
+**长时域baseline对照（2026-10-05）：**采用用户提供的2.5/3.5/4.5s表头。V2X-VLM行是用户提供的参考值，尚未核实来源、split、样本数、输入、GT与collision checker；T1/S1行来自本次480帧test逐帧预测重算。当前仅并列展示，不视为统一协议下的公平排名。原论文/外部报告结果与本项目实测来源明确区分。
+
+| Method / Settings | L2 Error (m) ↓ 2.5s | L2 Error (m) ↓ 3.5s | L2 Error (m) ↓ 4.5s | L2 Error (m) ↓ Avg. | Collision Rate (%) ↓ 2.5s | Collision Rate (%) ↓ 3.5s | Collision Rate (%) ↓ 4.5s | Collision Rate (%) ↓ Avg. |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| V2X-VLM (Baseline；用户提供，协议待核实) | 1.09 | 1.12 | 1.42 | 1.21 | 0.02 | 0.03 | 0.03 | 0.03 |
+| T1 双端GT对象文本；本项目test480 | 0.9740 | 2.1524 | 3.8247 | 2.3170 | — | — | — | — |
+| I1 / S1 双端GT对象soft tokens；本项目test480 | 0.9564 | 2.1246 | 3.7948 | 2.2920 | — | — | — | — |
+| I2 视觉 / 空间queries；待实验 | — | — | — | — | — | — | — | — |
+| I3 跨源空间融合queries；待实验 | — | — | — | — | — | — | — | — |
+
+此表Avg.为三个终点时刻L2的算术平均，**不是0.5–4.5s全部九点平均，也不是此前1/2/3s平均**。Baseline按用户给值保留（可能存在四舍五入），碰撞字段单位为百分比；本项目碰撞未评测，不能填0或移用baseline值。T1/S1在本次协议下的长时域平均分别2.3170/2.2920m，S1降低约1.08%；2.5s低于所给baseline，3.5/4.5s高于所给baseline，但协议未统一，不能由此下公平胜负结论。
+
+补充4s指标：T1 L2@4s=2.9286m，S1=2.9043m。数据证据：[长时域指标](../evaluation_results/T1_S1_test_20261005_114004/long_horizon_metrics.json)。无需重新推理，使用相同480帧预测与原始GT，索引4/6/8分别对应2.5/3.5/4.5s，索引7对应4s。
 
 ### 3. 第二类：消融实验
 
